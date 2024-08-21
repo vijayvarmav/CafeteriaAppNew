@@ -13,14 +13,12 @@ app.use(bodyParser.json());
 // MongoDB connection
 mongoose
   .connect(
-    "mongodb+srv://othervarma:vzu357OxzN78LyNG@cafeteriaapp.f1d3z24.mongodb.net/?retryWrites=true&w=majority&appName=CafeteriaApp",
-    { useNewUrlParser: true, useUnifiedTopology: true }
+    "mongodb+srv://othervarma:vzu357OxzN78LyNG@cafeteriaapp.f1d3z24.mongodb.net/?retryWrites=true&w=majority&appName=CafeteriaApp"
   )
   .then(() => console.log("Connected to DB"))
   .catch((err) => console.log(err));
 
-// Item Schema
-const itemsSchema = new mongoose.Schema({
+const breakfastSchema = new mongoose.Schema({
   itemName: String,
   cost: String,
   dailyOrders: {
@@ -32,7 +30,20 @@ const itemsSchema = new mongoose.Schema({
   },
 });
 
-const Item = mongoose.model("Item", itemsSchema, "items");
+const lunchSchema = new mongoose.Schema({
+  itemName: String,
+  cost: String,
+  dailyOrders: {
+    monday: { type: Number, default: 0 },
+    tuesday: { type: Number, default: 0 },
+    wednesday: { type: Number, default: 0 },
+    thursday: { type: Number, default: 0 },
+    friday: { type: Number, default: 0 },
+  },
+});
+
+const Breakfast = mongoose.model("Breakfast", breakfastSchema, "breakfast");
+const Lunch = mongoose.model("Lunch", lunchSchema, "lunch");
 
 // DailyOrder Sub-schema
 const dailyOrderSchema = new mongoose.Schema({
@@ -61,10 +72,17 @@ const usersSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", usersSchema, "users");
 
+// Handle requests to the root URL
+app.get("/", (req, res) => {
+  res.send("Welcome to the API! Use /item, /users, or other endpoints.");
+});
+
 // Create a new item
 app.post("/item", async (req, res) => {
   try {
-    const data = new Item(req.body);
+    const { mealType, ...itemData } = req.body;
+    const Model = mealType === "breakfast" ? Breakfast : Lunch;
+    const data = new Model(itemData);
     await data.save();
     res.status(201).send(data);
   } catch (err) {
@@ -76,7 +94,9 @@ app.post("/item", async (req, res) => {
 // Get all items
 app.get("/item", async (req, res) => {
   try {
-    const dayOfWeek = new Date().getDay(); // Get the current day of the week (0-6)
+    const { mealType } = req.query;
+    const Model = mealType === "breakfast" ? Breakfast : Lunch;
+    const dayOfWeek = new Date().getDay();
     const days = [
       "sunday",
       "monday",
@@ -88,7 +108,7 @@ app.get("/item", async (req, res) => {
     ];
     const orderField = `dailyOrders.${days[dayOfWeek]}`;
 
-    const items = await Item.find().sort({ [orderField]: -1 });
+    const items = await Model.find().sort({ [orderField]: -1 });
     res.json(items);
   } catch (err) {
     console.log(err);
@@ -99,8 +119,9 @@ app.get("/item", async (req, res) => {
 // Update item's daily order count
 app.post("/update-item-orders", async (req, res) => {
   try {
-    const { itemName } = req.body;
-    const dayOfWeek = new Date().getDay(); // Get the current day of the week (0-6)
+    const { itemName, mealType } = req.body;
+    const Model = mealType === "breakfast" ? Breakfast : Lunch;
+    const dayOfWeek = new Date().getDay();
     const days = [
       "sunday",
       "monday",
@@ -112,7 +133,7 @@ app.post("/update-item-orders", async (req, res) => {
     ];
     const updateField = `dailyOrders.${days[dayOfWeek]}`;
 
-    const item = await Item.findOneAndUpdate(
+    const item = await Model.findOneAndUpdate(
       { itemName },
       { $inc: { [updateField]: 1 } },
       { new: true }
@@ -166,8 +187,8 @@ app.get("/users", async (req, res) => {
 // Update user's daily order count
 app.post("/update-user-orders", async (req, res) => {
   try {
-    const { name, itemName } = req.body;
-    const dayOfWeek = new Date().getDay(); // Get the current day of the week (0-6)
+    const { name, itemName, mealType } = req.body;
+    const dayOfWeek = new Date().getDay();
     const days = [
       "sunday",
       "monday",
@@ -204,14 +225,15 @@ app.post("/update-user-orders", async (req, res) => {
 });
 
 // Example Express route to handle reset
-// Example Express route to handle reset
 app.post("/reset", async (req, res) => {
   try {
     // Reset item counts and user orders, but keep names
     await User.updateMany({}, { $set: { totalOrders: {} } });
-    await User.updateMany({}, { $set: { dailyOrders: {} } }); // Reset totalOrders
-    // Reset totalOrders
-    await Item.updateMany({}, { $set: { dailyOrders: {} } }); // Reset dailyOrders
+    await User.updateMany({}, { $set: { dailyOrders: {} } }); // Reset dailyOrders
+
+    // Reset Breakfast and Lunch collections
+    await Breakfast.updateMany({}, { $set: { dailyOrders: {} } });
+    await Lunch.updateMany({}, { $set: { dailyOrders: {} } });
 
     // Respond with success message
     res.status(200).send("Data reset successfully.");
@@ -224,7 +246,7 @@ app.post("/reset", async (req, res) => {
 // New endpoint to get items sorted by user's order counts
 app.post("/items-sorted-by-user", async (req, res) => {
   try {
-    const { userName } = req.body;
+    const { userName, mealType } = req.body; // Add mealType in the request body
     const dayOfWeek = new Date().getDay(); // Get the current day of the week (0-6)
     const days = [
       "sunday",
@@ -249,8 +271,11 @@ app.post("/items-sorted-by-user", async (req, res) => {
       itemOrderCounts[order.itemName] = order.orderCount;
     });
 
+    // Determine which model to use based on meal type
+    const Model = mealType === "breakfast" ? Breakfast : Lunch;
+
     // Get all items and sort by the user's order count
-    const items = await Item.find();
+    const items = await Model.find();
     items.sort((a, b) => {
       const aCount = itemOrderCounts[a.itemName] || 0;
       const bCount = itemOrderCounts[b.itemName] || 0;

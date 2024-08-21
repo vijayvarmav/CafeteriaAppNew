@@ -1,496 +1,572 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from 'react';
 import {
-  Autocomplete,
+  Container,
+  Grid,
+  Paper,
+  Checkbox,
+  List,
+  ListItem,
+  ListItemText,
+  Typography,
   Button,
-  IconButton,
-  TextField,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
-  Paper,
+  TableContainer,
+  IconButton,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-} from "@mui/material";
-import AddCircleOutlineRoundedIcon from "@mui/icons-material/AddCircleOutlineRounded";
-import DeleteIcon from "@mui/icons-material/Delete";
-import axios from "axios";
+  TextField,
+} from '@mui/material';
+import { Add, Remove, Edit, Delete } from '@mui/icons-material';
 
 const App = () => {
   const [users, setUsers] = useState([]);
-  const [items, setItems] = useState([]);
-  const [forms, setForms] = useState([
-    { selectedItems: [], selectedPerson: null },
-  ]);
-  const [statusMessage, setStatusMessage] = useState("");
-  const [openUserDialog, setOpenUserDialog] = useState(false);
-  const [openItemDialog, setOpenItemDialog] = useState(false);
-  const [newUserName, setNewUserName] = useState("");
-  const [newItemName, setNewItemName] = useState("");
-  const [newItemCost, setNewItemCost] = useState("");
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [lunchItems, setLunchItems] = useState([]);
+  const [breakfastItems, setBreakfastItems] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [summary, setSummary] = useState([]);
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [itemDialogOpen, setItemDialogOpen] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [newItem, setNewItem] = useState({
+    itemName: '',
+    cost: '',
+    mealType: 'Lunch',
+  });
 
-  // Dialog state
-  const [openDeleteConfirmDialog, setOpenDeleteConfirmDialog] = useState(false);
-  const [formToDeleteIndex, setFormToDeleteIndex] = useState(null);
-  const [openResetConfirmDialog, setOpenResetConfirmDialog] = useState(false);
-
-  // Fetch and sort users
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get("http://localhost:5000/users");
-        const today = new Date()
-          .toLocaleDateString("en-us", { weekday: "long" })
-          .toLowerCase();
-        const sortedUsers = response.data.sort(
-          (a, b) => b.totalOrders[today] - a.totalOrders[today]
+    const initializeLocalStorage = () => {
+      const initialData = {
+        breakfastMenu: [
+          { itemName: 'Idly', cost: 30 },
+          { itemName: 'Dosa', cost: 40 },
+          { itemName: 'Vada', cost: 50 },
+          { itemName: 'Bonda', cost: 60 },
+          { itemName: 'Upma', cost: 30 },
+          { itemName: 'Poha', cost: 45 },
+          { itemName: 'Chai', cost: 12 },
+        ],
+        lunchMenu: [
+          { itemName: 'Veg Fried Rice', cost: 50 },
+          { itemName: 'Egg Fried Rice', cost: 55 },
+          { itemName: 'Chicken Fried Rice', cost: 60 },
+          { itemName: 'Veg Thali', cost: 120 },
+          { itemName: 'Chicken Thali', cost: 140 },
+          { itemName: 'Roti', cost: 10 },
+          { itemName: 'Butter Chicken', cost: 150 },
+        ],
+        users: [
+          { name: 'Vijay' },
+          { name: 'Ankush' },
+          { name: 'Vivek' },
+          { name: 'Sachin' },
+          { name: 'Lasya' },
+          { name: 'Raghavendra' },
+        ],
+      };
+
+      if (!localStorage.getItem('breakfastMenu')) {
+        localStorage.setItem(
+          'breakfastMenu',
+          JSON.stringify(initialData.breakfastMenu)
         );
-        setUsers(sortedUsers);
-      } catch (err) {
-        console.log(err);
+      }
+      if (!localStorage.getItem('lunchMenu')) {
+        localStorage.setItem(
+          'lunchMenu',
+          JSON.stringify(initialData.lunchMenu)
+        );
+      }
+      if (!localStorage.getItem('users')) {
+        localStorage.setItem('users', JSON.stringify(initialData.users));
       }
     };
-    fetchUsers();
+
+    initializeLocalStorage();
+
+    setUsers(JSON.parse(localStorage.getItem('users')));
+    setBreakfastItems(JSON.parse(localStorage.getItem('breakfastMenu')));
+    setLunchItems(JSON.parse(localStorage.getItem('lunchMenu')));
+    setSummary(JSON.parse(localStorage.getItem('summary')) || []);
   }, []);
 
-  // Fetch and sort items based on selected user
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const response = await axios.get("http://localhost:5000/item");
-        const today = new Date()
-          .toLocaleDateString("en-us", { weekday: "long" })
-          .toLowerCase();
-        const defaultItems = response.data.sort(
-          (a, b) => b.dailyOrders[today] - a.dailyOrders[today]
-        );
-        if (selectedUser) {
-          const user = users.find((user) => user.name === selectedUser);
-          if (user && user.totalOrders[today] === 0) {
-            setItems(defaultItems);
-            return;
+  const handleUserSelect = (user) => {
+    const isSelected = selectedUsers.includes(user);
+    const existingEntry = summary.find((order) => order.user === user);
+
+    if (isSelected) {
+      setSelectedUsers((prevSelectedUsers) =>
+        prevSelectedUsers.filter((u) => u !== user)
+      );
+      if (selectedUsers.length === 1) {
+        setSelectedItems([]);
+      }
+    } else {
+      setSelectedUsers((prevSelectedUsers) => [...prevSelectedUsers, user]);
+      setSelectedItems(existingEntry ? existingEntry.items : []);
+    }
+  };
+
+  const handleItemSelect = (item) => {
+    const existingItem = selectedItems.find(
+      (i) => i.itemName === item.itemName
+    );
+    if (existingItem) {
+      setSelectedItems(
+        selectedItems.filter((i) => i.itemName !== item.itemName)
+      );
+    } else {
+      setSelectedItems([...selectedItems, { ...item, quantity: 1 }]);
+    }
+  };
+
+  const handleQuantityChange = (item, amount) => {
+    const updatedItems = selectedItems
+      .map((i) => {
+        if (i.itemName === item.itemName) {
+          const newQuantity = i.quantity + amount;
+          if (newQuantity > 0) {
+            return { ...i, quantity: newQuantity };
+          } else {
+            return null;
           }
-          const responseSortedItems = await axios.post(
-            "http://localhost:5000/items-sorted-by-user",
-            {
-              userName: selectedUser,
-            }
-          );
-          setItems(responseSortedItems.data);
-        } else {
-          setItems(defaultItems);
         }
-      } catch (err) {
-        console.log(err);
-      }
-    };
-    fetchItems();
-  }, [selectedUser, users]);
+        return i;
+      })
+      .filter((i) => i !== null);
 
-  const userOptions = users
-    .filter(
-      (user) => !forms.some((form) => form.selectedPerson?.value === user.name)
-    )
-    .map((user) => ({
-      label: user.name,
-      value: user.name,
-    }));
-
-  const itemOptions = items.map((item) => ({
-    label: item.itemName,
-    value: item.itemName,
-    cost: parseFloat(item.cost),
-  }));
-
-  const handleAddForm = () => {
-    setForms([...forms, { selectedItems: [], selectedPerson: null }]);
+    setSelectedItems(updatedItems);
   };
 
-  const handleDeleteForm = (index) => {
-    setFormToDeleteIndex(index);
-    setOpenDeleteConfirmDialog(true);
-  };
+  const handleConfirm = () => {
+    if (selectedUsers.length > 0 && selectedItems.length > 0) {
+      const newEntries = selectedUsers.map((user) => ({
+        user,
+        items: selectedItems,
+        totalCost: selectedItems.reduce(
+          (acc, item) => acc + item.cost * item.quantity,
+          0
+        ),
+      }));
 
-  const handleConfirmDeleteForm = () => {
-    setForms(forms.filter((_, i) => i !== formToDeleteIndex));
-    setOpenDeleteConfirmDialog(false);
-  };
-
-  const handleCancelDeleteForm = () => {
-    setOpenDeleteConfirmDialog(false);
-  };
-
-  const handlePersonChange = (index, newValue) => {
-    const newForms = [...forms];
-    newForms[index].selectedPerson = newValue;
-    setSelectedUser(newValue?.value || null);
-    setForms(newForms);
-  };
-
-  const handleItemChange = (index, newValue) => {
-    const newForms = [...forms];
-    newForms[index].selectedItems = newValue;
-    setForms(newForms);
-  };
-
-  const handleReset = () => {
-    setOpenResetConfirmDialog(true);
-  };
-
-  const handleConfirmReset = async () => {
-    try {
-      // Call the reset endpoint
-      await axios.post("http://localhost:5000/reset");
-      setForms(
-        forms.map((form) => ({
-          ...form,
-          selectedItems: [],
-        }))
+      const updatedSummary = summary.filter(
+        (order) => !selectedUsers.includes(order.user)
       );
-      setStatusMessage("Data reset successfully!");
-      setOpenResetConfirmDialog(false);
-    } catch (err) {
-      console.log(err);
-      setStatusMessage("Error resetting data.");
+      const newSummary = [...updatedSummary, ...newEntries];
+      localStorage.setItem('summary', JSON.stringify(newSummary));
+
+      setSummary(newSummary);
+      setSelectedUsers([]);
+      setSelectedItems([]);
     }
   };
 
-  const handleCancelReset = () => {
-    setOpenResetConfirmDialog(false);
+  const handleEdit = (user) => {
+    const existingEntry = summary.find((order) => order.user === user);
+    if (existingEntry) {
+      setSelectedUsers([user]);
+      setSelectedItems(existingEntry.items);
+    }
   };
 
-  const handleConfirmOrder = async () => {
-    try {
-      setStatusMessage("Processing...");
+  const handleDelete = (user) => {
+    const updatedSummary = summary.filter((order) => order.user !== user);
+    localStorage.setItem('summary', JSON.stringify(updatedSummary));
 
-      // Update user orders
-      const selectedUsers = forms
-        .map((form) => form.selectedPerson?.value)
-        .filter(Boolean);
-      for (const user of selectedUsers) {
-        const form = forms.find((f) => f.selectedPerson.value === user);
-        for (const item of form.selectedItems) {
-          await axios.post("http://localhost:5000/update-user-orders", {
-            name: user,
-            itemName: item.label,
-          });
-        }
-      }
-
-      // Update item orders
-      const allSelectedItems = forms.flatMap((form) => form.selectedItems);
-      for (const item of allSelectedItems) {
-        await axios.post("http://localhost:5000/update-item-orders", {
-          itemName: item.label,
-        });
-      }
-
-      // Refresh data after confirming orders
-      const responseUsers = await axios.get("http://localhost:5000/users");
-      const sortedUsers = responseUsers.data.sort((a, b) => {
-        const today = new Date()
-          .toLocaleDateString("en-us", { weekday: "long" })
-          .toLowerCase();
-        return b.totalOrders[today] - a.totalOrders[today];
-      });
-      setUsers(sortedUsers);
-
-      const responseItems = await axios.get("http://localhost:5000/item");
-      const today = new Date()
-        .toLocaleDateString("en-us", { weekday: "long" })
-        .toLowerCase();
-      const sortedItems = responseItems.data.sort(
-        (a, b) => b.dailyOrders[today] - a.dailyOrders[today]
+    setSummary(updatedSummary);
+    if (selectedUsers.includes(user)) {
+      setSelectedUsers((prevSelectedUsers) =>
+        prevSelectedUsers.filter((u) => u !== user)
       );
-      setItems(sortedItems);
-
-      setStatusMessage("Order confirmed successfully!");
-
-      // Reset forms after 2 seconds
-      setTimeout(() => {
-        setForms([{ selectedItems: [], selectedPerson: null }]);
-        setStatusMessage("");
-      }, 2000);
-    } catch (err) {
-      console.log(err);
-      setStatusMessage("Error confirming order.");
+      if (selectedUsers.length === 1) {
+        setSelectedItems([]);
+      }
     }
   };
 
-  const handleOpenUserDialog = () => setOpenUserDialog(true);
-  const handleCloseUserDialog = () => setOpenUserDialog(false);
-
-  const handleOpenItemDialog = () => setOpenItemDialog(true);
-  const handleCloseItemDialog = () => setOpenItemDialog(false);
-
-  const handleAddUser = async () => {
-    try {
-      await axios.post("http://localhost:5000/users", { name: newUserName });
-      setNewUserName("");
-      handleCloseUserDialog();
-      const response = await axios.get("http://localhost:5000/users");
-      const sortedUsers = response.data.sort((a, b) => {
-        const today = new Date()
-          .toLocaleDateString("en-us", { weekday: "long" })
-          .toLowerCase();
-        return b.totalOrders[today] - a.totalOrders[today];
-      });
-      setUsers(sortedUsers);
-    } catch (err) {
-      console.log(err);
+  const addUser = () => {
+    if (newUserName.trim()) {
+      const updatedUsers = [...users, { name: newUserName }];
+      setUsers(updatedUsers);
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      setNewUserName('');
+      setUserDialogOpen(false);
     }
   };
 
-  const handleAddItem = async () => {
-    try {
-      await axios.post("http://localhost:5000/item", {
-        itemName: newItemName,
-        cost: newItemCost,
-      });
-      setNewItemName("");
-      setNewItemCost("");
-      handleCloseItemDialog();
-      const response = await axios.get("http://localhost:5000/item");
-      const today = new Date()
-        .toLocaleDateString("en-us", { weekday: "long" })
-        .toLowerCase();
-      const sortedItems = response.data.sort(
-        (a, b) => b.dailyOrders[today] - a.dailyOrders[today]
-      );
-      setItems(sortedItems);
-    } catch (err) {
-      console.log(err);
-    }
-  };
+  const addItem = () => {
+    if (newItem.itemName.trim() && newItem.cost && newItem.mealType) {
+      const updatedItems =
+        newItem.mealType === 'Lunch'
+          ? [
+              ...lunchItems,
+              { itemName: newItem.itemName, cost: parseFloat(newItem.cost) },
+            ]
+          : [
+              ...breakfastItems,
+              { itemName: newItem.itemName, cost: parseFloat(newItem.cost) },
+            ];
 
-  const calculateTotalCost = (items) => {
-    return items.reduce((total, item) => total + item.cost, 0);
-  };
-
-  const calculateTotalQuantity = (items) => {
-    return items.length;
-  };
-
-  const aggregateItems = (items) => {
-    const itemMap = new Map();
-
-    items.forEach((item) => {
-      const existingItem = itemMap.get(item.label);
-      if (existingItem) {
-        existingItem.quantity += 1;
+      if (newItem.mealType === 'Lunch') {
+        setLunchItems(updatedItems);
+        localStorage.setItem('lunchMenu', JSON.stringify(updatedItems));
       } else {
-        itemMap.set(item.label, { ...item, quantity: 1 });
+        setBreakfastItems(updatedItems);
+        localStorage.setItem('breakfastMenu', JSON.stringify(updatedItems));
       }
-    });
 
-    return Array.from(itemMap.values());
+      setNewItem({ itemName: '', cost: '', mealType: 'Lunch' });
+      setItemDialogOpen(false);
+    }
   };
 
-  const allSelectedItems = forms.flatMap((form) => form.selectedItems);
-  const totalQuantity = calculateTotalQuantity(allSelectedItems);
-  const totalPrice = calculateTotalCost(allSelectedItems);
-  const aggregatedItems = aggregateItems(allSelectedItems);
+  const totalUsers = summary.length;
+  const totalItemsOrdered = summary.reduce(
+    (acc, entry) =>
+      acc + entry.items.reduce((sum, item) => sum + item.quantity, 0),
+    0
+  );
+  const totalOrderValue = summary.reduce(
+    (acc, entry) => acc + entry.totalCost,
+    0
+  );
+
+  const getUserStatusColor = (user) => {
+    return summary.some((entry) => entry.user === user) ? 'green' : 'gray';
+  };
 
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <h1>Cafeteria Application</h1>
-        <IconButton onClick={handleAddForm}>
-          <AddCircleOutlineRoundedIcon
-            sx={{ height: "30px", width: "30px", padding: "0px" }}
-          />
-        </IconButton>
-        <Button onClick={handleReset}>Reset</Button>
-      </div>
-
-      {forms.map((form, index) => (
-        <form
-          key={index}
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "5px",
-            marginBottom: "10px",
-          }}
-        >
-          <Autocomplete
-            disablePortal
-            id={`combo-box-user-${index}`}
-            options={[...userOptions, { label: "Add New User", value: "" }]}
-            value={form.selectedPerson}
-            onChange={(event, newValue) => {
-              if (newValue && newValue.value === "") {
-                handleOpenUserDialog();
-              } else {
-                handlePersonChange(index, newValue);
-              }
+    <Container>
+      <Typography variant="h4" gutterBottom align="center">
+        Cafeteria App
+      </Typography>
+      <Grid container sx={{ padding: '5px' }}>
+        <Grid item xs={3} sm={3}>
+          <Paper
+            elevation={3}
+            style={{
+              height: '70vh',
+              overflowY: 'scroll',
+              display: 'flex',
+              flexDirection: 'column',
             }}
-            sx={{ width: 300 }}
-            renderInput={(params) => <TextField {...params} label="Person" />}
-          />
-
-          <Autocomplete
-            multiple
-            disablePortal
-            id={`combo-box-item-${index}`}
-            options={[...itemOptions, { label: "Add New Item", value: "" }]}
-            value={form.selectedItems}
-            onChange={(event, newValue) => {
-              if (newValue && newValue.some((item) => item.value === "")) {
-                handleOpenItemDialog();
-              } else {
-                handleItemChange(index, newValue);
-              }
-            }}
-            getOptionLabel={(option) => option.label}
-            sx={{ width: 300 }}
-            renderInput={(params) => <TextField {...params} label="Order" />}
-          />
-
-          <TextField
-            id={`outlined-read-only-input-${index}`}
-            label="Total Cost"
-            value={`${calculateTotalCost(form.selectedItems).toFixed(2)}`}
-            InputProps={{
-              readOnly: true,
-            }}
-          />
-
-          <IconButton onClick={() => handleDeleteForm(index)}>
-            <DeleteIcon
-              sx={{ height: "30px", width: "30px", padding: "0px" }}
-            />
-          </IconButton>
-        </form>
-      ))}
-
-      <TableContainer component={Paper} style={{ marginTop: "20px" }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Items</TableCell>
-              <TableCell>Quantity</TableCell>
-              <TableCell>Price</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {aggregatedItems.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>{item.label}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>{`${(item.cost * item.quantity).toFixed(
-                  2
-                )}`}</TableCell>
-              </TableRow>
-            ))}
-            <TableRow>
-              <TableCell>
-                <strong>Total Quantity</strong>
-              </TableCell>
-              <TableCell>{totalQuantity}</TableCell>
-              <TableCell>
-                <strong>Total Price</strong>
-              </TableCell>
-              <TableCell>{`${totalPrice.toFixed(2)}`}</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell colSpan={4} style={{ textAlign: "center" }}>
+          >
+            <Typography variant="h6" style={{ margin: 0 }}>
+              Users
+            </Typography>
+            <List style={{ flexGrow: 1, margin: 0, padding: 0 }}>
+              {users.map((user) => (
+                <ListItem
+                  key={user.name}
+                  button
+                  onClick={() => handleUserSelect(user.name)}
+                  style={{ padding: 0 }}
+                >
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: getUserStatusColor(user.name),
+                      margin: '0px',
+                      marginLeft: '5px',
+                      padding: '0px',
+                    }}
+                  ></span>
+                  <Checkbox
+                    checked={selectedUsers.includes(user.name)}
+                    onChange={() => handleUserSelect(user.name)}
+                  />
+                  <ListItemText primary={user.name} style={{ margin: 0 }} />
+                </ListItem>
+              ))}
+              <ListItem>
                 <Button
                   variant="contained"
                   color="primary"
-                  onClick={handleConfirmOrder}
+                  onClick={() => setUserDialogOpen(true)}
+                  startIcon={<Add />}
                 >
-                  Confirm Order
+                  Add User
                 </Button>
-                {statusMessage && <p>{statusMessage}</p>}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
+              </ListItem>
+            </List>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={6} sm={6}>
+          <Paper
+            elevation={3}
+            style={{
+              height: '70vh',
+              overflowY: 'scroll',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Typography variant="h6" style={{ margin: 0 }}>
+              Lunch Menu
+            </Typography>
+            <List style={{ flexGrow: 1, margin: 0, padding: 0 }}>
+              {lunchItems.map((item) => (
+                <ListItem
+                  key={item.itemName}
+                  button
+                  onClick={() => handleItemSelect(item)}
+                  style={{ padding: 0 }}
+                >
+                  <Checkbox
+                    checked={selectedItems.some(
+                      (i) => i.itemName === item.itemName
+                    )}
+                    onChange={() => handleItemSelect(item)}
+                  />
+                  <ListItemText
+                    primary={`${item.itemName} - $${item.cost}`}
+                    style={{ margin: 0 }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+            <Typography variant="h6" style={{ margin: '10px 0 0 0' }}>
+              Breakfast Menu
+            </Typography>
+            <List style={{ flexGrow: 1, margin: 0, padding: 0 }}>
+              {breakfastItems.map((item) => (
+                <ListItem
+                  key={item.itemName}
+                  button
+                  onClick={() => handleItemSelect(item)}
+                  style={{ padding: 0 }}
+                >
+                  <Checkbox
+                    checked={selectedItems.some(
+                      (i) => i.itemName === item.itemName
+                    )}
+                    onChange={() => handleItemSelect(item)}
+                  />
+                  <ListItemText
+                    primary={`${item.itemName} - $${item.cost}`}
+                    style={{ margin: 0 }}
+                  />
+                </ListItem>
+              ))}
+              <ListItem>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => setItemDialogOpen(true)}
+                  startIcon={<Add />}
+                >
+                  Add Item
+                </Button>
+              </ListItem>
+            </List>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={3} sm={3}>
+          <Paper
+            elevation={3}
+            style={{
+              height: '70vh',
+              overflowY: 'scroll',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 0,
+            }}
+          >
+            <Typography variant="h6" style={{ margin: 0 }}>
+              Summary
+            </Typography>
+            <div style={{ flexGrow: 1, padding: 10 }}>
+              {selectedUsers.length > 0 && (
+                <>
+                  <Typography variant="subtitle1" style={{ margin: '10px 0' }}>
+                    Users: {selectedUsers.join(', ')}
+                  </Typography>
+                  {selectedItems.length > 0 && (
+                    <List style={{ margin: 0, padding: 0 }}>
+                      {selectedItems.map((item) => (
+                        <ListItem key={item.itemName} style={{ padding: 0 }}>
+                          <ListItemText
+                            primary={`${item.itemName} - $${item.cost}`}
+                            style={{ margin: 0 }}
+                          />
+                          <IconButton
+                            onClick={() => handleQuantityChange(item, -1)}
+                          >
+                            <Remove />
+                          </IconButton>
+                          <Typography>{item.quantity}</Typography>
+                          <IconButton
+                            onClick={() => handleQuantityChange(item, 1)}
+                          >
+                            <Add />
+                          </IconButton>
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                  {selectedItems.length > 0 && (
+                    <Typography
+                      variant="subtitle1"
+                      style={{ marginTop: '10px' }}
+                    >
+                      Total: $
+                      {selectedItems.reduce(
+                        (acc, item) => acc + item.cost * item.quantity,
+                        0
+                      )}
+                    </Typography>
+                  )}
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    onClick={handleConfirm}
+                    style={{ marginTop: '10px' }}
+                  >
+                    Confirm
+                  </Button>
+                </>
+              )}
+            </div>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12}>
+          <TableContainer
+            component={Paper}
+            elevation={3}
+            style={{ marginTop: '20px', padding: 0 }}
+          >
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell style={{ width: '30%' }}>User</TableCell>
+                  <TableCell style={{ width: '40%' }}>Items</TableCell>
+                  <TableCell style={{ width: '15%' }}>Total Cost</TableCell>
+                  <TableCell style={{ width: '15%' }}>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {summary.map((entry, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{entry.user}</TableCell>
+                    <TableCell>
+                      {entry.items.map((i) => (
+                        <div key={i.itemName}>
+                          {i.itemName} x {i.quantity}
+                        </div>
+                      ))}
+                    </TableCell>
+                    <TableCell>${entry.totalCost}</TableCell>
+                    <TableCell>
+                      <IconButton onClick={() => handleEdit(entry.user)}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton onClick={() => handleDelete(entry.user)}>
+                        <Delete />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableRow>
+                  <TableCell colSpan={1} style={{ fontWeight: 'bold' }}>
+                    Total Users: {totalUsers}
+                  </TableCell>
+                  <TableCell colSpan={1} style={{ fontWeight: 'bold' }}>
+                    Total Items Ordered: {totalItemsOrdered}
+                  </TableCell>
+                  <TableCell colSpan={2} style={{ fontWeight: 'bold' }}>
+                    Total Order Value: ${totalOrderValue}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Grid>
+      </Grid>
 
       {/* User Dialog */}
-      <Dialog open={openUserDialog} onClose={handleCloseUserDialog}>
-        <DialogTitle>Create New User</DialogTitle>
+      <Dialog open={userDialogOpen} onClose={() => setUserDialogOpen(false)}>
+        <DialogTitle>Add New User</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
             label="User Name"
+            type="text"
             fullWidth
             value={newUserName}
             onChange={(e) => setNewUserName(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseUserDialog}>Cancel</Button>
-          <Button onClick={handleAddUser}>Add</Button>
+          <Button onClick={() => setUserDialogOpen(false)}>Cancel</Button>
+          <Button onClick={addUser} color="primary">
+            Add
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Item Dialog */}
-      <Dialog open={openItemDialog} onClose={handleCloseItemDialog}>
-        <DialogTitle>Create New Item</DialogTitle>
+      {/* Item Dialog */}
+      <Dialog open={itemDialogOpen} onClose={() => setItemDialogOpen(false)}>
+        <DialogTitle>Add New Item</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
             label="Item Name"
+            type="text"
             fullWidth
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
+            value={newItem.itemName}
+            onChange={(e) =>
+              setNewItem({ ...newItem, itemName: e.target.value })
+            }
           />
           <TextField
             margin="dense"
-            label="Item Cost"
+            label="Cost"
             type="number"
             fullWidth
-            value={newItemCost}
-            onChange={(e) => setNewItemCost(e.target.value)}
+            value={newItem.cost}
+            onChange={(e) => setNewItem({ ...newItem, cost: e.target.value })}
           />
+          <TextField
+            margin="dense"
+            label="Meal Type"
+            select
+            fullWidth
+            value={newItem.mealType}
+            onChange={(e) =>
+              setNewItem({ ...newItem, mealType: e.target.value })
+            }
+            SelectProps={{
+              native: true,
+            }}
+          >
+            <option value="Lunch">Lunch</option>
+            <option value="Breakfast">Breakfast</option>
+          </TextField>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseItemDialog}>Cancel</Button>
-          <Button onClick={handleAddItem}>Add</Button>
+          <Button onClick={() => setItemDialogOpen(false)}>Cancel</Button>
+          <Button onClick={addItem} color="primary">
+            Add
+          </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Delete Confirm Dialog */}
-      <Dialog open={openDeleteConfirmDialog} onClose={handleCancelDeleteForm}>
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          <p>Are you sure you want to delete this form?</p>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelDeleteForm}>Cancel</Button>
-          <Button onClick={handleConfirmDeleteForm}>Confirm</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Reset Confirm Dialog */}
-      <Dialog open={openResetConfirmDialog} onClose={handleCancelReset}>
-        <DialogTitle>Confirm Reset</DialogTitle>
-        <DialogContent>
-          <p>Are you sure you want to reset all data?</p>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelReset}>Cancel</Button>
-          <Button onClick={handleConfirmReset}>Confirm</Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+    </Container>
   );
 };
 
