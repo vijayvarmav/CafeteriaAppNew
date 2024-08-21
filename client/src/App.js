@@ -68,6 +68,7 @@ const App = () => {
           { name: 'Sachin' },
           { name: 'Lasya' },
           { name: 'Raghavendra' },
+          
         ],
       };
 
@@ -98,8 +99,7 @@ const App = () => {
 
   const handleUserSelect = (user) => {
     const isSelected = selectedUsers.includes(user);
-    const existingEntry = summary.find((order) => order.user === user);
-
+  
     if (isSelected) {
       setSelectedUsers((prevSelectedUsers) =>
         prevSelectedUsers.filter((u) => u !== user)
@@ -108,10 +108,14 @@ const App = () => {
         setSelectedItems([]);
       }
     } else {
-      setSelectedUsers((prevSelectedUsers) => [...prevSelectedUsers, user]);
+      if (!selectedUsers.includes(user)) {
+        setSelectedUsers((prevSelectedUsers) => [...prevSelectedUsers, user]);
+      }
+      const existingEntry = summary.find((order) => order.user === user);
       setSelectedItems(existingEntry ? existingEntry.items : []);
     }
   };
+  
 
   const handleItemSelect = (item) => {
     const existingItem = selectedItems.find(
@@ -247,7 +251,7 @@ const App = () => {
         Cafeteria App
       </Typography>
       <Grid container sx={{ padding: '5px' }}>
-        <Grid item xs={3} sm={3}>
+        <Grid item xs={12} sm={3}>
           <Paper
             elevation={3}
             style={{
@@ -301,7 +305,7 @@ const App = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={6} sm={6}>
+        <Grid item xs={12} sm={6}>
           <Paper
             elevation={3}
             style={{
@@ -372,7 +376,7 @@ const App = () => {
           </Paper>
         </Grid>
 
-        <Grid item xs={3} sm={3}>
+        <Grid item xs={12} sm={3}>
           <Paper
             elevation={3}
             style={{
