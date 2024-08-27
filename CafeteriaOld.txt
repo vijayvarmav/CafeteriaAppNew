@@ -58,7 +58,7 @@ const App = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/users");
+        const response = await axios.get("https://z4kw6g-5000.csb.app/users");
         const today = new Date()
           .toLocaleDateString("en-us", { weekday: "long" })
           .toLowerCase();
@@ -77,7 +77,7 @@ const App = () => {
     const fetchBreakfastItems = async () => {
       setLoadingBreakfast(true);
       try {
-        const response = await axios.get("http://localhost:5000/item", {
+        const response = await axios.get("https://z4kw6g-5000.csb.app/item", {
           params: { mealType: "breakfast" },
         });
         const today = new Date()
@@ -93,7 +93,7 @@ const App = () => {
             setBreakfastItems(defaultItems);
           } else {
             const responseSortedItems = await axios.post(
-              "http://localhost:5000/items-sorted-by-user",
+              "https://z4kw6g-5000.csb.app/items-sorted-by-user",
               { userName: selectedUser, mealType: "breakfast" }
             );
             setBreakfastItems(responseSortedItems.data);
@@ -115,7 +115,7 @@ const App = () => {
     const fetchLunchItems = async () => {
       setLoadingLunch(true);
       try {
-        const response = await axios.get("http://localhost:5000/item", {
+        const response = await axios.get("https://z4kw6g-5000.csb.app/item", {
           params: { mealType: "lunch" },
         });
         const today = new Date()
@@ -131,7 +131,7 @@ const App = () => {
             setLunchItems(defaultItems);
           } else {
             const responseSortedItems = await axios.post(
-              "http://localhost:5000/items-sorted-by-user",
+              "https://z4kw6g-5000.csb.app/items-sorted-by-user",
               { userName: selectedUser, mealType: "lunch" }
             );
             setLunchItems(responseSortedItems.data);
@@ -259,7 +259,7 @@ const App = () => {
   const handleConfirmReset = async () => {
     try {
       // Call the reset endpoint
-      await axios.post("http://localhost:5000/reset");
+      await axios.post("https://z4kw6g-5000.csb.app/reset");
       setForms(
         forms.map((form) => ({
           ...form,
@@ -321,7 +321,7 @@ const App = () => {
 
       // Update user orders
       const userOrders = orders.map((order) =>
-        axios.post("http://localhost:5000/update-user-orders", {
+        axios.post("https://z4kw6g-5000.csb.app/update-user-orders", {
           name: order.userName,
           itemName: order.itemName,
         })
@@ -330,7 +330,7 @@ const App = () => {
 
       // Update item orders
       const itemOrders = orders.map((order) =>
-        axios.post("http://localhost:5000/update-item-orders", {
+        axios.post("https://z4kw6g-5000.csb.app/update-item-orders", {
           itemName: order.itemName,
           mealType: order.mealType,
         })
@@ -339,8 +339,8 @@ const App = () => {
 
       // Refresh data after confirming orders
       const [responseUsers, responseItems] = await Promise.all([
-        axios.get("http://localhost:5000/users"),
-        axios.get("http://localhost:5000/item", {
+        axios.get("https://z4kw6g-5000.csb.app/users"),
+        axios.get("https://z4kw6g-5000.csb.app/item", {
           params: { mealType: "lunch" }, // Use correct meal type here
         }),
       ]);
@@ -377,12 +377,12 @@ const App = () => {
 
   const handleAddUser = async () => {
     try {
-      await axios.post("http://localhost:5000/users", {
+      await axios.post("https://z4kw6g-5000.csb.app/users", {
         name: newUserName,
       });
       setNewUserName("");
       handleCloseUserDialog();
-      const response = await axios.get("http://localhost:5000/users");
+      const response = await axios.get("https://z4kw6g-5000.csb.app/users");
       const sortedUsers = response.data.sort((a, b) => {
         const today = new Date()
           .toLocaleDateString("en-us", { weekday: "long" })
@@ -405,7 +405,7 @@ const App = () => {
       };
 
       // Send a request to add the item
-      await axios.post("http://localhost:5000/item", newItem);
+      await axios.post("https://z4kw6g-5000.csb.app/item", newItem);
 
       // Clear the input fields
       setNewItemName("");
@@ -423,7 +423,7 @@ const App = () => {
       }
 
       // Optionally fetch the updated items based on the meal type (if necessary)
-      const response = await axios.get("http://localhost:5000/item", {
+      const response = await axios.get("https://z4kw6g-5000.csb.app/item", {
         params: { mealType: mealType?.type }, // Make sure to pass the mealType.type
       });
 
@@ -620,14 +620,14 @@ const App = () => {
                       width: "100%",
                       zIndex: 1300,
                       padding: 0,
-                      // "& .MuiAutocomplete-hasPopupIcon.MuiAutocomplete-hasClearIcon.css-8j5cdv-MuiAutocomplete-root .MuiOutlinedInput-root":
-                      //   {
-                      //     paddingRight: 0,
-                      //   },
-                      // "& .MuiAutocomplete-hasPopupIcon.MuiAutocomplete-hasClearIcon.css-8j5cdv-MuiAutocomplete-root .MuiAutocomplete-inputRoot":
-                      //   {
-                      //     paddingRight: 0,
-                      //   },
+                      "& .MuiAutocomplete-hasPopupIcon.MuiAutocomplete-hasClearIcon.css-8j5cdv-MuiAutocomplete-root .MuiOutlinedInput-root":
+                        {
+                          paddingRight: 0,
+                        },
+                      "& .MuiAutocomplete-hasPopupIcon.MuiAutocomplete-hasClearIcon.css-8j5cdv-MuiAutocomplete-root .MuiAutocomplete-inputRoot":
+                        {
+                          paddingRight: 0,
+                        },
                     }} // Make autocomplete full width
                     renderInput={(params) => (
                       <TextField
@@ -642,14 +642,14 @@ const App = () => {
                             },
                             padding: 0, // Remove padding of the TextField itself
                           },
-                          // "& .MuiAutocomplete-hasPopupIcon.MuiAutocomplete-hasClearIcon.css-8j5cdv-MuiAutocomplete-root .MuiOutlinedInput-root":
-                          //   {
-                          //     paddingRight: 0,
-                          //   },
-                          // "& .MuiAutocomplete-hasPopupIcon.MuiAutocomplete-hasClearIcon.css-8j5cdv-MuiAutocomplete-root .MuiAutocomplete-inputRoot":
-                          //   {
-                          //     paddingRight: 0,
-                          //   },
+                          "& .MuiAutocomplete-hasPopupIcon.MuiAutocomplete-hasClearIcon.css-8j5cdv-MuiAutocomplete-root .MuiOutlinedInput-root":
+                            {
+                              paddingRight: 0,
+                            },
+                          "& .MuiAutocomplete-hasPopupIcon.MuiAutocomplete-hasClearIcon.css-8j5cdv-MuiAutocomplete-root .MuiAutocomplete-inputRoot":
+                            {
+                              paddingRight: 0,
+                            },
                         }}
                       />
                     )}

@@ -6,8 +6,14 @@ const mongoose = require("mongoose");
 const app = express();
 const PORT = 5000;
 
+const corsOptions = {
+  origin: "http://localhost:3000", // Allow requests only from this origin
+  methods: ["GET", "POST", "PUT", "DELETE"], // Allow specific HTTP methods
+  allowedHeaders: ["Content-Type"], // Allow specific headers
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
 // MongoDB connection
